@@ -1,0 +1,11 @@
+[package]
+name = "async-ssh"
+version = "0.1.0"
+authors = ["Jon Gjengset <jon@thesquareplanet.com>"]
+
+[dependencies]
+futures = "0.1"
+thrussh = "0.19"
+tokio-core = "0.1"
+tokio-io = "0.1"
+thrussh-keys = "0.9"
