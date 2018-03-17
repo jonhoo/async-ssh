@@ -16,6 +16,7 @@ fn main() {
     let mut core = tokio_core::reactor::Core::new().unwrap();
     let handle = core.handle();
 
+    let cmd = ::std::env::args().skip(1).next().unwrap();
     let key = thrussh_keys::load_secret_key("/home/jon/aws-test.pem", None).unwrap();
 
     let ls_out = TcpStream::connect(&"52.23.157.12:22".parse().unwrap(), &handle)
@@ -24,18 +25,18 @@ fn main() {
         .and_then(Session::new)
         .and_then(|session| session.authenticate_key("ec2-user", key))
         .and_then(|session| {
-            session.open_exec("ls -la").map(|(session, channel)| {
+            session.open_exec(&cmd).map(|(session, channel)| {
                 handle.spawn(session.map_err(|_| ()));
                 channel
             })
         });
 
     let channel = core.run(ls_out).unwrap();
-    let (_channel, data) = core.run(tokio_io::io::read_to_end(channel, Vec::new()))
+    let (channel, data) = core.run(tokio_io::io::read_to_end(channel, Vec::new()))
         .unwrap();
-    //.and_then(|(channel, data)| channel.exit_status().map(move |status| (status, data)))
     println!("{}", ::std::str::from_utf8(&data[..]).unwrap());
-    //println!("{}", status);
+    let status = core.run(channel.exit_status()).unwrap();
+    println!("{}", status);
 
     /*
 

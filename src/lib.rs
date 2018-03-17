@@ -6,7 +6,7 @@ extern crate tokio_io;
 use tokio_io::{AsyncRead, AsyncWrite};
 use std::rc::Rc;
 use std::cell::RefCell;
-use futures::Future;
+use futures::{Async, Future, Poll};
 use std::collections::HashMap;
 
 #[derive(Default)]
@@ -51,7 +51,7 @@ impl thrussh::client::Handler for SessionStateRef {
                 .expect("got data for unknown channel");
 
             state.data.extend(data);
-            if let Some(task) = state.notify.take() {
+            if let Some(task) = state.read_notify.take() {
                 task.notify();
             }
         } else {
@@ -73,8 +73,12 @@ impl thrussh::client::Handler for SessionStateRef {
                 .get_mut(&channel)
                 .expect("got data for unknown channel");
 
-            state.finished = true;
-            if let Some(task) = state.notify.take() {
+            state.eof = true;
+            state.closed = true;
+            if let Some(task) = state.read_notify.take() {
+                task.notify();
+            }
+            if let Some(task) = state.exit_notify.take() {
                 task.notify();
             }
         }
@@ -94,8 +98,8 @@ impl thrussh::client::Handler for SessionStateRef {
                 .get_mut(&channel)
                 .expect("got data for unknown channel");
 
-            state.finished = true;
-            if let Some(task) = state.notify.take() {
+            state.eof = true;
+            if let Some(task) = state.read_notify.take() {
                 task.notify();
             }
         }
@@ -111,13 +115,15 @@ impl thrussh::client::Handler for SessionStateRef {
     ) -> Self::SessionUnit {
         {
             let mut state = self.0.borrow_mut();
-            state
+            let state = state
                 .state_for
                 .get_mut(&channel)
-                .expect("got data for unknown channel")
-                .exit_status = Some(exit_status);
+                .expect("got data for unknown channel");
 
-            // TODO: wake up ExitStatusFuture
+            state.exit_status = Some(exit_status);
+            if let Some(task) = state.exit_notify.take() {
+                task.notify();
+            }
         }
 
         futures::finished((self, session))
@@ -191,8 +197,40 @@ pub struct Channel {
     id: thrussh::ChannelId,
 }
 
+pub struct ExitStatusFuture {
+    state: SessionStateRef,
+    id: thrussh::ChannelId,
+}
+
 impl Channel {
-    //pub fn exit_status(self) -> Box<Future<Item = u32, Error = ()>> {}
+    pub fn exit_status(self) -> ExitStatusFuture {
+        ExitStatusFuture {
+            state: self.state,
+            id: self.id,
+        }
+    }
+}
+
+impl Future for ExitStatusFuture {
+    type Item = u32;
+    type Error = ();
+
+    fn poll(&mut self) -> Poll<Self::Item, Self::Error> {
+        let mut s = self.state.borrow_mut();
+        let state = s.state_for
+            .get_mut(&self.id)
+            .expect("no state entry for valid channel");
+
+        state.exit_notify = None;
+        if let Some(e) = state.exit_status {
+            Ok(Async::Ready(e))
+        } else if state.closed {
+            Err(())
+        } else {
+            state.exit_notify = Some(futures::task::current());
+            Ok(Async::NotReady)
+        }
+    }
 }
 
 use std::io::prelude::*;
@@ -201,8 +239,10 @@ use std::io;
 struct ChannelState {
     data_start: usize,
     data: Vec<u8>,
-    finished: bool,
-    notify: Option<futures::task::Task>,
+    eof: bool,
+    closed: bool,
+    read_notify: Option<futures::task::Task>,
+    exit_notify: Option<futures::task::Task>,
     exit_status: Option<u32>,
 }
 
@@ -211,8 +251,10 @@ impl Default for ChannelState {
         ChannelState {
             data_start: 0,
             data: Vec::new(),
-            finished: false,
-            notify: None,
+            eof: false,
+            closed: false,
+            read_notify: None,
+            exit_notify: None,
             exit_status: None,
         }
     }
@@ -233,8 +275,9 @@ impl Read for Channel {
             state.data.clear();
         }
 
-        if n == 0 && !state.finished {
-            state.notify = Some(futures::task::current());
+        state.read_notify = None;
+        if n == 0 && !state.eof {
+            state.read_notify = Some(futures::task::current());
             Err(io::Error::new(io::ErrorKind::WouldBlock, ""))
         } else {
             Ok(n)
