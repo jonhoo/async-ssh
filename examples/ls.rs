@@ -5,7 +5,6 @@ extern crate thrussh_keys;
 extern crate tokio_core;
 extern crate tokio_io;
 
-use std::io::prelude::*;
 use tokio_core::net::TcpStream;
 use async_ssh::Session;
 use futures::Future;
