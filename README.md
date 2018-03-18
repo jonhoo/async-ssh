@@ -58,3 +58,15 @@ This crate started out in [this
 video](https://www.youtube.com/watch?v=RBQwZthJjoM). To get updates about
 future streams, follow me on [Patreon](https://www.patreon.com/jonhoo) or
 [Twitter](https://twitter.com/jonhoo).
+
+# Thank you
+
+For each of the projects I build, I like to thank the people who are willing
+and able to take the extra step of supporting me in making these videos on
+[Patreon](https://www.patreon.com/jonhoo) or
+[Liberapay](https://liberapay.com/jonhoo/). You have my most sincere gratitude,
+and I'm so excited that you find what I do interesting enough that you're
+willing to give a stranger money to do something they love!
+
+ - Roger Andersen (@hexjelly)
+ - Pigeon F
