@@ -22,14 +22,9 @@ fn main() {
     let ls_out = TcpStream::connect(&"52.23.157.12:22".parse().unwrap(), &handle)
         .map_err(thrussh::Error::IO)
         .map_err(thrussh::HandlerError::Error)
-        .and_then(Session::new)
+        .and_then(|c| Session::new(c, &handle))
         .and_then(|session| session.authenticate_key("ec2-user", key))
-        .and_then(|session| {
-            session.open_exec(&cmd).map(|(session, channel)| {
-                handle.spawn(session.map_err(|_| ()));
-                channel
-            })
-        });
+        .and_then(|mut session| session.open_exec(&cmd));
 
     let channel = core.run(ls_out).unwrap();
     let (channel, data) = core.run(tokio_io::io::read_to_end(channel, Vec::new()))
