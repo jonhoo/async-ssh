@@ -46,6 +46,7 @@
 //! println!("{}", ::std::str::from_utf8(&data[..]).unwrap());
 //! println!("exited with: {}", status);
 //! # }
+//! ```
 #![deny(missing_docs)]
 
 extern crate futures;

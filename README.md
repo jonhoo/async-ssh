@@ -42,6 +42,7 @@ let status = core.run(channel.exit_status()).unwrap();
 
 println!("{}", ::std::str::from_utf8(&data[..]).unwrap());
 println!("exited with: {}", status);
+```
 
 # Live-coding
 
