@@ -1,6 +1,11 @@
 language: rust
-sudo: false
+sudo: required
 cache: cargo
+before_install:
+  - sudo apt-get update -qq
+  - sudo apt-get install build-essential git -y
+  - git clone -b stable https://github.com/jedisct1/libsodium.git
+  - cd libsodium && ./configure && make check && sudo make install && cd ..
 rust:
   - stable
   - beta
