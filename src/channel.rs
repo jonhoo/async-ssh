@@ -161,6 +161,9 @@ impl Read for Channel {
         let n = ::std::cmp::min(buf.len(), state.data.len() - state.data_start);
         (&mut buf[..n]).copy_from_slice(&state.data[state.data_start..(state.data_start + n)]);
 
+        // note: Vec::drain is an attractive option here (as it would obviate the need for a bunch of the
+        // bookkeeping we're doing) but we're choosing not to use it because it copies the entire remaining 
+        // vector on drop, which could be expensive.
         state.data_start += n;
         if state.data_start == state.data.len() {
             state.data_start = 0;
