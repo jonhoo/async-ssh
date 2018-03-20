@@ -6,6 +6,7 @@ use thrussh;
 use session;
 use SharableConnection;
 
+#[derive(Default)]
 pub(crate) struct State {
     pub(crate) closed: bool,
 
@@ -19,25 +20,6 @@ pub(crate) struct State {
 
     pub(crate) open_notify: Option<futures::task::Task>,
     pub(crate) open_state: Option<Result<(), thrussh::ChannelOpenFailure>>,
-}
-
-impl Default for State {
-    fn default() -> Self {
-        State {
-            closed: false,
-
-            read_notify: None,
-            data_start: 0,
-            data: Vec::new(),
-            eof: false,
-
-            exit_notify: None,
-            exit_status: None,
-
-            open_notify: None,
-            open_state: None,
-        }
-    }
 }
 
 /// A newly opened, but not yet established channel.
